@@ -2,21 +2,27 @@ var Descuento = require('../models/descuento');
 var fs = require('fs');
 var path = require('path');
 
-const registro_descuento_admin = async function(req,res){
+const registro_descuento_admin = async function(req, res) {
     if (req.user) {
-        if (req.user.role=='admin') {
-            let data=req.body;
+        if (req.user.role === 'admin') {
+            let data = req.body;
             var img_path = req.files.banner.path;
             var name = img_path.split('\\');
             var banner_name = name[2];
             data.banner = banner_name;
-            let reg = await Descuento.create(data);
-            res.status(200).send({data:reg});
-        }else{
-            res.status(500).send({message: 'NoAccess'});
+
+            // Validación: Verificar que el descuento no sea negativo
+            if (data.descuento < 0) {
+                res.status(400).send({ message: 'El descuento no puede ser negativo.' });
+            } else {
+                let reg = await Descuento.create(data);
+                res.status(200).send({ data: reg });
+            }
+        } else {
+            res.status(500).send({ message: 'NoAccess' });
         }
-    }else{
-        res.status(500).send({message: 'NoAccess'});
+    } else {
+        res.status(500).send({ message: 'NoAccess' });
     }
 }
 

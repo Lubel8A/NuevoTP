@@ -6,33 +6,46 @@ var Review = require('../models/review');
 var fs = require('fs');
 var path = require('path');
 
-const registro_producto_admin=async function(req,res){
+const registro_producto_admin = async function (req, res) {
     if (req.user) {
-        if (req.user.role=='admin') {
-            let data=req.body;
+        if (req.user.role == 'admin') {
+            let data = req.body;
             var img_path = req.files.portada.path;
             var name = img_path.split('\\');
             var portada_name = name[2];
-            data.slug = data.titulo.toLowerCase().replace(/ /g,'-').replace(/[^\w-]+/g,'');
+            data.slug = data.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
             data.portada = portada_name;
-            let reg = await Producto.create(data);
 
-            let inventario = await Inventario.create({
-                admin: req.user.sub,
-                cantidad: data.stock,
-                proveedor: 'Primer registro',
-                producto: reg._id
-            });
+            // Verificar si ya existe un producto con el mismo título
+            const existingProduct = await Producto.findOne({ titulo: data.titulo });
 
-            res.status(200).send({data:reg, inventario});
+            if (existingProduct) {
 
-        }else{
-            res.status(500).send({message: 'NoAccess'});
+                res.status(400).send({ message: 'El título ya está registrado' });
+            
+            }else if (data.stock >= 0 && data.precio > 0) {
+                let reg = await Producto.create(data);
+
+                let inventario = await Inventario.create({
+                    admin: req.user.sub,
+                    cantidad: data.stock,
+                    proveedor: 'Primer registro',
+                    producto: reg._id
+                });
+                res.status(200).send({ data: reg, inventario });
+            }else if(data.precio <=0){
+                res.status(400).send({ message: 'El precio no puede ser menor o igual a 0' });
+            }else {
+                res.status(400).send({ message: 'El stock no puede ser negativo' });
+            }
+        } else {
+            res.status(500).send({ message: 'NoAccess' });
         }
-    }else{
-        res.status(500).send({message: 'NoAccess'});
+    } else {
+        res.status(500).send({ message: 'NoAccess' });
     }
 }
+
 
 const listar_productos_admin=async function(req,res){
     if (req.user) {
